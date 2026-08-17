@@ -1,0 +1,29 @@
+# --- .NET ---
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+# --- Rider ---
+.idea/
+
+# --- Obsidian ---
+# workspace.json e estado de UI, sem valor versionado
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+.trash/
+
+# --- Modelos Whisper (centenas de MB, baixados sob demanda) ---
+*.bin
+models/
+
+# --- Saida dos spikes ---
+*.wav
+spikes/**/output/
+
+# --- Segredos: chaves de API de STT e traducao ---
+appsettings.Local.json
+appsettings.*.Local.json
+*.secrets.json
+.env
