@@ -25,13 +25,19 @@ não tem ecossistema de STT.
 Onde Rails caberia de verdade: um backend futuro de contas, licenças e cobrança. Mas
 para isso já existe Spring Boot no repertório, sem custo de aprendizado.
 
-## É C# / .NET 8 + WPF
+## É C# / .NET 10 + WPF
 
 - `NAudio.WasapiLoopbackCapture` resolve nativamente a parte mais difícil
 - Sintaxe próxima de Java: a curva é de biblioteca, não de linguagem
 - Overlay always-on-top é trivial em WPF
 - Distribuição limpa: exe self-contained ou MSIX
-- .NET 8 por ser LTS — suporte estendido importa em produto que será vendido
+- .NET 10 por ser o LTS vigente, com suporte até 14/11/2028 — prazo longo importa
+  em produto que será vendido e mantido por anos
+
+> [!warning] Não usar .NET 8, mesmo ele ainda aparecendo como LTS
+> Verificado na página oficial em 17/08/2026: o .NET 8 está em **manutenção** e sai
+> de suporte em **10/11/2026** — menos de três meses. Começar um produto novo nele
+> seria dívida no dia um. O .NET 9 também não serve: é STS e termina na mesma data.
 
 **Avaliadas e descartadas:** Tauri (melhor produto final, mas Rust atrasa a v1 em
 semanas — volta à mesa se cross-platform virar requisito de negócio) e Electron

@@ -51,7 +51,7 @@ própria — e pode rodar **100% local**, sem o áudio sair da máquina. Ver
 
 | Camada | Escolha |
 |---|---|
-| Runtime | .NET 8 (LTS) |
+| Runtime | .NET 10 (LTS) |
 | Linguagem | C# |
 | UI | WPF (Windows) |
 | Áudio | NAudio — `WasapiLoopbackCapture` |

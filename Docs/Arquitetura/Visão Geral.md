@@ -5,7 +5,7 @@ atualizado: 2026-08-17
 
 # Visão Geral
 
-Solution .NET 8 dividida por responsabilidade, com uma regra central que sustenta
+Solution .NET 10 dividida por responsabilidade, com uma regra central que sustenta
 todo o resto:
 
 > [!important] A regra que faz o desenho valer a pena

@@ -10,8 +10,14 @@ atualizado: 2026-08-17
 Terceiro projeto, ao lado do Trilha e do NewsTech.
 
 Ideia inicial era Ruby on Rails; descartada com o motivo registrado em
-[[Decisões Deliberadas]]. Definida a stack C# / .NET 8 + WPF + NAudio + Whisper.net,
-com Rider como IDE.
+[[Decisões Deliberadas]]. Definida a stack C# / .NET 10 + WPF + NAudio +
+Whisper.net, com Rider como IDE.
+
+> [!note] Correção no mesmo dia
+> A stack foi definida primeiro sobre .NET 8, no pressuposto de que ele era o LTS
+> corrente. Ao conferir a página oficial de download, verificou-se que o 8 sai de
+> suporte em 10/11/2026 e que o LTS vigente é o **.NET 10**. Corrigido antes de
+> qualquer instalação — nenhum código chegou a ser escrito sobre o 8.
 
 Fechadas as decisões de arquitetura: janela deslizante com LocalAgreement-2, STT
 local e nuvem atrás da mesma interface, nuvem como padrão de fábrica.
