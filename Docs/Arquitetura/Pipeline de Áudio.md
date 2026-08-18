@@ -65,3 +65,35 @@ Limiar de silêncio (~500–700 ms), duração mínima e máxima de segmento (te
 para não travar em quem fala sem pausar), intervalo de reprocessamento. Todos via
 configuração: a calibração vai sair de ouvir chamadas reais, e recompilar a cada
 ajuste é desperdício.
+
+## Medições reais (18/08/2026)
+
+Máquina de desenvolvimento, saída padrão "Alto-falantes (High Definition Audio
+Device)":
+
+| Medida | Valor |
+|---|---|
+| Formato entregue | 48.000 Hz, 2 canais, 32 bits, `Extensible` |
+| Throughput | 384.000 bytes/s |
+| Buffers por segundo | ~100 |
+| Duração de cada buffer | **~10 ms** (3.840 bytes) |
+
+> [!important] O orçamento de 10 ms
+> É o tempo que o consumidor tem para processar um buffer antes do próximo chegar.
+> Não é o limite do STT (esse trabalha sobre segmentos bem maiores) — é o limite da
+> etapa de cópia, downmix e resample. Estourar isso produz `DataDiscontinuity`, que
+> é o nome técnico do áudio perdido.
+
+O flag `DataDiscontinuity` do `AudioBuffer` torna esse problema **detectável em
+tempo de execução**, em vez de depender de alguém notar transcrição estranha. Vale
+instrumentar isso na implementação de produção e não só no spike.
+
+## Consumo: `IAsyncEnumerable`, não evento
+
+`WasapiRecorder.CaptureAsync(CancellationToken)` devolve
+`IAsyncEnumerable<AudioBuffer>`. Isso substitui com vantagem o padrão antigo de
+evento `DataAvailable` + `Channel`: os buffers já chegam fora da thread de áudio do
+driver, e o cancelamento é cooperativo.
+
+A regra de não bloquear continua valendo — só mudou de lugar. O que não pode é o
+corpo do `await foreach` demorar mais que o intervalo de chegada dos buffers.

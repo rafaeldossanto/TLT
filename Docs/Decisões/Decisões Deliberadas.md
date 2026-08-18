@@ -71,3 +71,26 @@ de venda; só não é o que roda antes do usuário escolher. Ver
 
 O Whisper tem uma tarefa `translate` embutida, e é tentador economizar uma etapa com
 ela. Não serve: ela só traduz **para inglês**. Ver [[Armadilhas Conhecidas]].
+
+## API nova do NAudio 3, nunca a obsoleta
+
+`WasapiLoopbackCapture` e `WasapiCapture` estão marcados como **obsoletos** no
+NAudio 3. A documentação oficial do projeto ainda ensina os dois, o que engana — a
+API vigente é `WasapiRecorderBuilder` / `WasapiRecorder`, descoberta por inspeção do
+assembly em 18/08/2026.
+
+Não é renomeação: a API nova habilita coisas que a antiga não tinha, e duas mudam o
+produto.
+
+> [!tip] `WithProcessLoopback(pid, modo)` — captura por processo
+> Permite capturar o áudio de **um processo específico**, ou de todos menos ele.
+> Para o TLT isso significa legendar apenas o app da chamada, ignorando música,
+> notificação do sistema e qualquer outro som. Exige Windows 10 build 19041+, que já
+> é o TFM adotado. Ver [[Pipeline de Áudio]].
+
+O resto do ganho: `CaptureAsync` devolve `IAsyncEnumerable<AudioBuffer>` em vez de
+evento, o buffer carrega flags do WASAPI (`Silent`, `DataDiscontinuity`,
+`TimestampError`) e o recorder expõe latência real e controle de cancelamento de eco.
+
+Princípio geral: projeto que nasce hoje e será mantido por anos não começa sobre API
+obsoleta, mesmo que ela funcione.
