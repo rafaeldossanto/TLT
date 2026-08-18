@@ -97,3 +97,45 @@ driver, e o cancelamento é cooperativo.
 
 A regra de não bloquear continua valendo — só mudou de lugar. O que não pode é o
 corpo do `await foreach` demorar mais que o intervalo de chegada dos buffers.
+
+## Resultado do spike completo (30 s, 18/08/2026)
+
+| Medida | Valor |
+|---|---|
+| Buffers recebidos | 2.999 em 30 s |
+| Tamanho do buffer | **3.840 bytes, fixo** — nunca variou |
+| Duração por buffer | 10,0 ms exatos |
+| Maior intervalo | 35 ms |
+| Áudio gravado | 30,0 s, sem lacuna |
+| `DataDiscontinuity` | 1 ocorrência |
+| `Silent` | 0 ocorrências (ver ressalva abaixo) |
+
+O buffer ter tamanho **fixo** simplifica o consumidor: dá para dimensionar estruturas
+uma vez, sem realocar por chegada.
+
+A única `DataDiscontinuity` aconteceu na transição de origem do áudio, não sob carga.
+Serve como prova de que a instrumentação funciona — o flag realmente aparece quando
+há perda, e é assim que a implementação de produção vai enxergar o problema.
+
+> [!danger] O flag `Silent` é inútil para detectar silêncio
+> Cinco segundos de silêncio digital absoluto (100% das amostras em zero, verificado
+> por análise do WAV) produziram **zero** buffers marcados como `Silent`. A detecção
+> tem que olhar o conteúdo. Ver [[Armadilhas Conhecidas]].
+
+## O WASAPI aceita 16 kHz mono direto
+
+`.WithFormat(new WaveFormat(16000, 16, 1))` foi aceito e o recorder passou a reportar
+16.000 Hz mono — exatamente o que o Whisper consome.
+
+> [!important] Isso remove uma etapa inteira do pipeline
+> O desenho original previa capturar em 48 kHz estéreo e fazer downmix + resample por
+> conta própria. Com o formato pedido direto na construção, essa etapa sai do código.
+
+Duas ressalvas antes de considerar fechado:
+
+1. A conversão não desaparece do mundo, apenas sai do nosso código — ela passa a
+   acontecer dentro do NAudio ou do próprio endpoint do Windows. O ganho é de
+   simplicidade e de superfície de bug, não necessariamente de CPU.
+2. O teste provou que o formato é **aceito**, não que a qualidade da conversão serve.
+   Validar com fala real antes de descartar o resample próprio: um resample ruim
+   degrada a transcrição de um jeito que só aparece na taxa de erro do STT.

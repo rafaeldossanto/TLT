@@ -24,14 +24,31 @@ Compartilhou a tela na reunião, todos veem a legenda — inclusive a tradução
 acabaram de dizer. Corrige-se com `SetWindowDisplayAffinity` +
 `WDA_EXCLUDEFROMCAPTURE`. Ver [[Interface e Overlay]].
 
-## O loopback fica mudo, não entrega zeros
+## O flag `Silent` não detecta silêncio
 
-No Windows 10, `WasapiLoopbackCapture` **não dispara** `DataAvailable` quando não há
-absolutamente nenhum áudio tocando. O stream não entrega silêncio: ele simplesmente
-para.
+> [!danger] Não use `AudioClientBufferFlags.Silent` para pular processamento
+> Medido em 18/08/2026: com 5 segundos de **silêncio digital absoluto** (100% de
+> amostras em zero, confirmado por análise do WAV gravado), o WASAPI marcou o flag
+> `Silent` em **zero buffers**. O flag existe, mas não é levantado no caso em que
+> seria útil.
 
-É estado normal, não falha. Reiniciar a captura ao detectar "ausência de dados" cria
-um ciclo de reinício justamente quando ninguém está falando.
+Quem confiar nele vai enviar silêncio ao STT achando que filtrou. A detecção de
+silêncio tem que olhar o **conteúdo** — é trabalho do VAD, ou de uma checagem barata
+de amostras zeradas antes dele. Ver [[Pipeline de Áudio]].
+
+### O loopback continua entregando no silêncio
+
+A crença comum — e o que estava escrito aqui antes — é que o loopback simplesmente
+para de entregar buffers quando não há áudio. **Não foi o que aconteceu.** A captura
+seguiu contínua durante o silêncio, entregando buffers de zeros, com intervalo máximo
+de 35 ms entre eles.
+
+> [!warning] Ressalva do teste
+> Durante a medição havia um processo de áudio vivo na máquina, apenas sem
+> reproduzir. O cenário de endpoint **totalmente ocioso**, sem nenhuma sessão de
+> áudio aberta, não foi exercitado — e é justamente o estado do PC quando o TLT abre
+> antes da chamada começar. Manter o tratamento defensivo: ausência prolongada de
+> buffers é estado possível e não deve disparar reinício de captura.
 
 ## Trabalho pesado no callback de áudio
 
