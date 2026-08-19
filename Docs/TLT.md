@@ -22,11 +22,14 @@ A diferença para as legendas nativas do Teams ou do Meet: o TLT funciona em
 própria — e pode rodar **100% local**, sem o áudio sair da máquina. Ver
 [[Posicionamento Comercial]].
 
-> [!warning] Estado: planejamento
-> Diferente do cofre do Trilha, este documenta um projeto que **ainda não tem uma
-> linha de código**. Tudo aqui é decisão de desenho, não descrição do que existe.
-> As notas de arquitetura descrevem o alvo; conforme o código nascer, elas viram
-> descrição. A [[Linha do Tempo]] marca o que já saiu do papel.
+> [!info] Estado: fundação pronta, sem funcionalidade
+> A solution existe, compila e tem testes. O que existe são as **abstrações** de
+> `Tlt.Core` e o esqueleto dos projetos — nenhuma implementação real ainda: não
+> captura, não transcreve, não traduz. As três medições que sustentam o desenho já
+> foram feitas e estão registradas com números, não com suposição.
+>
+> As notas de arquitetura ainda descrevem o alvo mais do que o construído. A
+> [[Linha do Tempo]] marca o que já saiu do papel.
 
 ## Arquitetura
 

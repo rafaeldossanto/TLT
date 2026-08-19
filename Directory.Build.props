@@ -1,0 +1,17 @@
+<Project>
+
+  <!-- Propriedades comuns a todos os projetos. Equivale ao bloco allprojects
+       de um build.gradle raiz. -->
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <InvariantGlobalization>true</InvariantGlobalization>
+
+    <!-- Warning vira erro: em projeto novo o custo de manter zero warnings e
+         baixo, e o de recuperar depois de acumular centenas e alto. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>

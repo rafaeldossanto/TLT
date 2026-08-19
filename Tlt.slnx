@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Tlt.App/Tlt.App.csproj" />
+    <Project Path="src/Tlt.Audio/Tlt.Audio.csproj" />
+    <Project Path="src/Tlt.Core/Tlt.Core.csproj" />
+    <Project Path="src/Tlt.Stt.Cloud/Tlt.Stt.Cloud.csproj" />
+    <Project Path="src/Tlt.Stt.Local/Tlt.Stt.Local.csproj" />
+    <Project Path="src/Tlt.Translation/Tlt.Translation.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Tlt.Core.Tests/Tlt.Core.Tests.csproj" />
+  </Folder>
+</Solution>
