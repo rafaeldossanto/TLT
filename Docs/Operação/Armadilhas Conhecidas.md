@@ -69,3 +69,26 @@ ativo. Taxa de amostragem hardcoded quebra no primeiro usuário com placa a 44,1
 
 Custa segundos por chamada e destrói qualquer alvo de latência. Manter o contexto do
 Whisper vivo entre segmentos.
+
+## O Whisper.net cai para CPU sem avisar
+
+`RuntimeOptions.RuntimeLibraryOrder` precisa ser configurado explicitamente, senão o
+padrão é CPU mesmo com as DLLs de GPU presentes no diretório de saída. E quando a
+carga da biblioteca acelerada falha — por dependência ausente, driver velho, o que
+for — o fallback para CPU é **silencioso**: sem exceção, sem log, sem aviso.
+
+O sintoma é o produto ficar dez vezes mais lento sem nenhum erro aparente.
+
+Sempre verificar `RuntimeOptions.LoadedLibrary` após carregar o modelo, e expor isso
+na interface de diagnóstico do app. O usuário que reclamar de lentidão precisa
+conseguir dizer qual biblioteca está ativa.
+
+## A primeira transcrição é muito mais lenta (Vulkan)
+
+Medir sem descartar a primeira passada produz número errado: no Vulkan ela inclui
+compilação de shaders. No spike da task #3, `base` apareceu **mais lento que**
+`small` — impossível — só porque foi o primeiro a rodar.
+
+Fazer uma passada de aquecimento curta e descartá-la antes de qualquer medição. No
+app de produção, isso significa aquecer o modelo ao iniciar, e não deixar o custo
+cair sobre a primeira frase da chamada do usuário.

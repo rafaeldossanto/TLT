@@ -94,3 +94,31 @@ evento, o buffer carrega flags do WASAPI (`Silent`, `DataDiscontinuity`,
 
 Princípio geral: projeto que nasce hoje e será mantido por anos não começa sobre API
 obsoleta, mesmo que ela funcione.
+
+## Aceleração por Vulkan, não CUDA
+
+Medido em 18/08/2026. O Whisper.net oferece `Cpu`, `Cuda`, `Cuda12`, `Vulkan`,
+`CoreML`, `OpenVino` e `CpuNoAvx` — e a escolha entre eles decide mais do que
+velocidade.
+
+**CUDA foi descartado por um motivo de produto, não de performance.** O pacote
+`Whisper.net.Runtime.Cuda` traz `ggml-cuda-whisper.dll` (148 MB) mas **não** traz
+`cudart` nem `cublas`, que vêm do CUDA Toolkit. Sem o Toolkit instalado, a carga
+falha e o Whisper.net cai silenciosamente para CPU — foi exatamente o que aconteceu
+aqui. Exigir que o cliente instale o CUDA Toolkit é inaceitável num produto de
+usuário final, e embutir as DLLs engorda o instalador.
+
+**Vulkan resolve os três problemas de uma vez:**
+
+- Roda com o **driver comum** da GPU, sem toolkit nenhum
+- É **cross-vendor**: NVIDIA, AMD e Intel com o mesmo binário — um runtime para toda
+  a base de clientes, em vez de um caminho por fabricante
+- É **menor**: 116 MB contra 312 MB do CUDA (58 MB considerando só win-x64)
+
+E entrega: `small` a RTF 13,7x numa GTX 1050 Ti. Ver [[Requisitos de Hardware]].
+
+> [!important] A seleção não é automática
+> O Whisper.net só tenta CUDA e Vulkan se `RuntimeOptions.RuntimeLibraryOrder` for
+> configurado explicitamente. No padrão ele usa CPU — e o fallback é **silencioso**,
+> sem log nem exceção. Conferir `RuntimeOptions.LoadedLibrary` depois de carregar é
+> a única forma de saber o que está rodando de fato. Ver [[Armadilhas Conhecidas]].

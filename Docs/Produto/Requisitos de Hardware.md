@@ -1,50 +1,61 @@
 ---
 tags: [produto]
-atualizado: 2026-08-17
+atualizado: 2026-08-18
 ---
 
 # Requisitos de Hardware
 
 Só se aplica ao **modo local**. No modo nuvem o processamento sai da máquina e
-qualquer PC capaz de rodar uma chamada de vídeo atende.
+qualquer PC capaz de sustentar uma chamada de vídeo atende.
 
 ## O número que manda
 
 A janela deslizante reprocessa ~10 s de áudio a cada ~800 ms. Transcrever 10 s em
-menos de 800 ms é **~12x tempo real (RTF ≥ 12)**.
+menos de 800 ms é **RTF ≥ 12** (real-time factor). Abaixo disso o app degrada:
+primeiro aumenta o intervalo de reprocessamento, depois cai para segmentação por
+frase, e por último recomenda o modo nuvem.
 
-Esse é o alvo. Abaixo dele o app degrada: primeiro aumenta o intervalo de
-reprocessamento, depois cai para segmentação por frase, e por último recomenda o
-modo nuvem.
+## Medições reais
 
-## Tiers
+Máquina de desenvolvimento — **GTX 1050 Ti** (Pascal, 4 GB, 2016), i5-7400, via
+**Vulkan**. Áudio de 57 s, quantização Q5_0, idioma fixo em inglês.
 
-> [!todo] A medir
-> A tabela abaixo é a saída da task #3 e ainda **não tem dados reais**. Não publicar
-> requisito de sistema com estimativa: prometer de menos perde cliente, prometer
-> demais gera reembolso.
+| Modelo | Tamanho | Tempo | RTF | WER | Veredito |
+|---|---|---|---|---|---|
+| tiny | 28 MB | 1,4 s | **40,2x** | 8,3% | folga enorme, qualidade pior |
+| base | 53 MB | 2,0 s | **29,3x** | 6,4% | folga grande |
+| **small** | 167 MB | 4,2 s | **13,7x** | 5,7% | **ponto ótimo** |
+| medium | 514 MB | 8,4 s | 6,8x | 5,7% | só segmentação por frase |
+| large-v3-turbo | 547 MB | 8,2 s | 7,0x | 5,7% | só segmentação por frase |
 
-| Tier | GPU | Modelo | Latência esperada |
-|---|---|---|---|
-| Alto | a medir | `large-v3-turbo` | 1,5–3 s |
-| Médio | a medir | `medium` ou `small` | a medir |
-| Baixo | a medir | `small` | modo degradado |
-| Sem GPU | — | — | só nuvem |
+> [!success] A janela deslizante é viável numa GPU de 2016
+> Era a dúvida que travava a arquitetura. `small` entrega RTF 13,7x numa 1050 Ti —
+> acima do alvo de 12. O desenho de baixa latência **não** exige hardware caro.
 
-## Como medir sem ter o hardware
+Em CPU pura (i5-7400, 4 núcleos), para comparação: `base` fica em 6,0x e `small` em
+1,8x. Ou seja, **sem GPU o modo local não sustenta a janela deslizante**, e a partir
+de `small` mal acompanha o tempo real.
 
-Alugar GPU por hora na RunPod ou Vast.ai. Uma RTX 3060, uma 4070 e uma 4090 por uma
-hora cada custa poucos dólares e produz número real em vez de estimativa.
+## Escolha padrão: `small`
 
-A máquina de desenvolvimento atual (GTX 1050 Ti, 4 GB, Pascal sem Tensor Cores) serve
-para medir o **piso**, não o alvo — decisão explícita de 17/08/2026 de não
-dimensionar o produto por ela.
+Ganha por eliminação. Tem o mesmo WER de `medium` e `turbo` neste teste, com o dobro
+da velocidade e um terço do tamanho. `base` seria mais rápido, mas erra mais.
 
-## Metodologia
+> [!warning] Duas ressalvas antes de tratar isto como definitivo
+> **O áudio de teste era TTS**, o material mais fácil que existe para transcrever —
+> sem sotaque, sem ruído, sem sobreposição de falas. Em chamada real os WER sobem, e
+> é provável que `medium` e `turbo` se separem de `small`, o que aqui não aconteceu.
+> Refazer a comparação com gravação de reunião de verdade.
+>
+> **A GPU não estará livre.** Estes números são de uma máquina ociosa. Durante uma
+> chamada, o app de vídeo está decodificando na mesma GPU. A folga real de `small`
+> (13,7 contra 12) é pequena para esse cenário — medir sob carga antes de fixar o
+> padrão.
 
-Áudio de referência de ~60 s capturado do próprio loopback, de call ou vídeo técnico
-real. **Não usar áudio de estúdio limpo**: ele infla a qualidade aparente e esconde
-exatamente os erros que aparecem no uso real. Registrar RTF, VRAM ocupada e se o
-modelo acertou nomes próprios, siglas e jargão.
+## Distribuição
 
-Medir também CPU-only, para saber a partir de onde apenas a nuvem atende.
+O runtime Vulkan do Whisper.net ocupa **58 MB** para Windows x64 (`ggml-vulkan`
+responde por 56 MB). É o que precisa ir no instalador, além do modelo escolhido.
+
+`small` em Q5_0 são mais 167 MB, baixados sob demanda na primeira execução em vez de
+embutidos — instalador menor e permite trocar de modelo sem reinstalar.
