@@ -43,6 +43,7 @@ própria — e pode rodar **100% local**, sem o áudio sair da máquina. Ver
 ## Contexto
 
 - [[Privacidade por Padrão]] — o ADR: transcrição local por padrão e o que decorre disso
+- [[Tradução Local]] — a investigação que falta para a promessa de privacidade fechar
 - [[Decisões Deliberadas]] — o que foi escolhido e o que foi descartado, com o porquê
 - [[Armadilhas Conhecidas]] — erros mapeados antes de acontecer
 - [[Linha do Tempo]] — histórico do projeto

@@ -108,3 +108,15 @@ permanente na interface enquanto estiver ativa, e teto de gasto configurável.
   de 14%. Se cair abaixo do alvo durante uma chamada, o padrão pode ter que ser
   `base`. Ver task #12.
 - **Qualidade com fala real** — o teste usou TTS, fácil demais. Ver task #11.
+
+---
+
+## Atualização de 18/08/2026
+
+A primeira hipótese para tradução local — LLM generalista pequeno — foi testada e
+**descartada**, por latência antes mesmo de qualidade: 2,2 s por frase, que somados
+ao STT estouram o orçamento de ponta a ponta. Detalhes e números em
+[[Tradução Local]].
+
+A promessa de privacidade segue **incompleta**. Não anunciar privacidade total até
+que exista um caminho de tradução local viável.
