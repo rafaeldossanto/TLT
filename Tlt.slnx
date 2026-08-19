@@ -8,6 +8,7 @@
     <Project Path="src/Tlt.Translation/Tlt.Translation.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/Tlt.Audio.Tests/Tlt.Audio.Tests.csproj" />
     <Project Path="tests/Tlt.Core.Tests/Tlt.Core.Tests.csproj" />
   </Folder>
 </Solution>

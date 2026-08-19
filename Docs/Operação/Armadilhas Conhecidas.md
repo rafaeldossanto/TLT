@@ -59,11 +59,17 @@ procurar o bug no STT.
 ## Trocar o fone derruba a captura
 
 Se o usuário troca o dispositivo de saída no meio da chamada — tira o fone, conecta
-o Bluetooth — a captura morre silenciosamente. Detectar com `MMNotificationClient` e
-reconectar no novo dispositivo padrão.
+o Bluetooth — a captura morre silenciosamente.
+
+Resolvido em `WasapiLoopbackSource`, mas **não** pelo caminho que parecia óbvio: ver
+a seção sobre o builder mais abaixo. A detecção é pelo término do fluxo, e a
+reconexão tem limite de tentativas com espera entre elas, para que um dispositivo
+realmente ausente não vire laço infinito.
 
 Pelo mesmo motivo, o resample precisa ser derivado do formato **real** do dispositivo
-ativo. Taxa de amostragem hardcoded quebra no primeiro usuário com placa a 44,1 kHz.
+ativo. Taxa de amostragem hardcoded quebra no primeiro usuário com placa a 44,1 kHz —
+e na reconexão o normalizador é recriado justamente porque o dispositivo novo pode
+chegar com outra taxa.
 
 ## Recarregar o modelo a cada segmento
 
@@ -92,3 +98,28 @@ compilação de shaders. No spike da task #3, `base` apareceu **mais lento que**
 Fazer uma passada de aquecimento curta e descartá-la antes de qualquer medição. No
 app de produção, isso significa aquecer o modelo ao iniciar, e não deixar o custo
 cair sobre a primeira frase da chamada do usuário.
+
+## O builder do NAudio não resolve a troca de dispositivo
+
+Parece resolver: existe `WithDefaultDeviceStreamRouting()`, que reconecta sozinho
+quando o dispositivo padrão muda. Mas ele segue o dispositivo de **captura**, e o
+NAudio rejeita explicitamente a combinação com loopback:
+
+> Automatic stream routing follows the default capture device — it cannot be combined
+> with WithLoopbackCapture()
+
+Ou seja, para captura loopback a reconexão é por conta própria. A implementação em
+`WasapiLoopbackSource` detecta pelo término do fluxo: quando o dispositivo some, o
+`CaptureAsync` termina sem cancelamento, e aí a fonte reabre e recria o normalizador
+com o formato do dispositivo novo — que pode ter taxa diferente.
+
+## `BuildAsync` quando há roteamento
+
+`WasapiRecorderBuilder.Build()` lança se alguma opção assíncrona estiver ativa:
+
+> Automatic stream routing is activated asynchronously — call BuildAsync() instead
+
+Nenhum dos dois erros acima aparece em teste de unidade: eles exigem abrir o
+dispositivo de verdade. Foram encontrados rodando a implementação contra a placa de
+som real, e é por isso que vale ter um caminho de verificação com áudio de verdade
+além dos testes puros.

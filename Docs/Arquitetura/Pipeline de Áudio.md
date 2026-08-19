@@ -139,3 +139,37 @@ Duas ressalvas antes de considerar fechado:
 2. O teste provou que o formato é **aceito**, não que a qualidade da conversão serve.
    Validar com fala real antes de descartar o resample próprio: um resample ruim
    degrada a transcrição de um jeito que só aparece na taxa de erro do STT.
+
+## Implementação (18/08/2026)
+
+`Tlt.Audio.WasapiLoopbackSource` implementa `IAudioSource`. Verificado contra a placa
+de som real: 48 kHz estéreo entrando, 16 kHz mono saindo, 2,99 s de áudio em 3 s de
+captura, com a amplitude preservada exatamente (seno de amplitude 0,15 gerou RMS
+0,1060 contra 0,1061 teórico).
+
+### Reamostragem com filtro, não decimação
+
+De 48 kHz para 16 kHz a tentação é pegar uma amostra a cada três. Isso rebate as
+frequências acima de 8 kHz para dentro da banda — aliasing — e o reconhecedor recebe
+esse ruído como se fosse sinal. A implementação usa `WdlResampler`, que aplica o
+passa-baixa antes.
+
+> [!tip] Isso está protegido por teste
+> `Reamostragem_filtra_frequencia_acima_de_Nyquist` alimenta um tom de 12 kHz e exige
+> que a energia na saída caia abaixo de 10%. O par
+> `Reamostragem_preserva_frequencia_dentro_da_banda` alimenta 1 kHz e exige que
+> sobreviva — sem ele, o primeiro teste passaria mesmo se tudo fosse zerado.
+
+O reamostrador é **stateful**: mantém histórico entre blocos, que é o que evita
+estalos nas emendas. Uma instância por sessão de captura.
+
+### Mistura de canais pela média
+
+Somar os canais estouraria o intervalo `[-1, 1]` e saturaria, aparecendo como
+distorção nos trechos altos — justamente onde alguém fala mais forte.
+
+### Conversão de amostras
+
+O WASAPI em modo compartilhado costuma entregar float de 32 bits, mas não é garantido.
+A leitura trata 32 e 16 bits e falha explicitamente no resto, em vez de produzir ruído
+silenciosamente.
