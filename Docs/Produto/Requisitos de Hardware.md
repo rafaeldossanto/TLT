@@ -59,3 +59,16 @@ responde por 56 MB). É o que precisa ir no instalador, além do modelo escolhid
 
 `small` em Q5_0 são mais 167 MB, baixados sob demanda na primeira execução em vez de
 embutidos — instalador menor e permite trocar de modelo sem reinstalar.
+
+## Revisão do critério (18/08/2026)
+
+A tabela acima usa RTF medido sobre 57 s de áudio, o que **superestima** o que a
+janela deslizante consegue: buffer longo amortiza o overhead fixo de ~820 ms por
+chamada, e a janela trabalha com 10 s.
+
+O critério correto para o modo de baixa latência é o custo absoluto por passada, não
+o RTF. Na GTX 1050 Ti com `small`, uma passada de 10 s custa 1.083 ms, o que sustenta
+reprocessamento a cada 1,5 s com 72% de ocupação. Ver [[Custo da Transcrição]].
+
+Ao medir os tiers em GPU alugada (ainda pendente), medir **o custo de uma passada de
+10 s**, e não o RTF sobre um arquivo longo.

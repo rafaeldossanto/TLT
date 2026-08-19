@@ -78,3 +78,48 @@ enquanto se anuncia que "o áudio não sai da máquina" é uma meia-verdade.
 
 Enquanto não houver tradução local, o modo privacidade está incompleto e não deve ser
 vendido como completo. Ver [[Privacidade por Padrão]].
+
+## Estado da implementação (18/08/2026)
+
+`Tlt.Stt.Local.WhisperSpeechRecognizer` implementa `ISpeechRecognizer`. Verificado
+ponta a ponta com o pipeline completo — áudio, VAD, segmentação, transcrição — sobre
+57 s de fala: backend **Vulkan** confirmado em execução, oito trechos transcritos com
+~985 ms de média cada e o texto saindo correto.
+
+Três coisas que a implementação carrega:
+
+- `RuntimeOptions.RuntimeLibraryOrder` configurado antes de carregar o modelo, senão
+  o Whisper.net usa CPU mesmo com as DLLs de GPU no lugar
+- `Backend` exposto a partir de `RuntimeOptions.LoadedLibrary`, porque a queda para
+  CPU é silenciosa
+- `WarmUpAsync` com ruído de 1 s descartado, para a compilação de shaders do Vulkan
+  não cair sobre a primeira frase do usuário
+
+> [!warning] `IsConfirmed` sai como falso, sempre
+> O reconhecedor não sabe se aquele áudio ainda pode ser revisado — isso é decisão da
+> política de streaming, que vive uma camada acima. Marcar como confirmado aqui faria
+> texto provisório seguir para a tradução e para a tela como se fosse definitivo.
+
+## O que ainda falta: a janela deslizante
+
+O que existe hoje entrega **segmentação por frase**: o VAD fecha o trecho, o
+reconhecedor transcreve. Funciona, e é o modo de degradação previsto no ADR — mas
+não é a arquitetura escolhida.
+
+A latência desse modo é *duração da frase* mais ~1 s. No teste real houve uma frase de
+11,24 s, o que daria mais de 12 segundos até a legenda aparecer. É utilizável para
+acompanhar, mas está longe do alvo de 1,5–3 s.
+
+Falta a camada que reprocessa o trecho **em curso** a cada 1,5 s, emite hipótese
+provisória e confirma o prefixo quando duas passagens concordam (LocalAgreement-2).
+Ela consome o mesmo `ISpeechRecognizer` — nada da implementação atual precisa mudar.
+
+## Provedor de nuvem: não implementado
+
+Depende de duas decisões que não são técnicas: **qual serviço** e **com qual conta**.
+A interface e a regra de degradação já estão definidas; falta escolher o fornecedor,
+comparar preço por minuto e ter credencial para testar.
+
+Como o ADR fixou local como padrão e proibiu subida automática para nuvem, a ausência
+desse provedor não bloqueia o produto — ela só limita o atendimento a máquinas sem
+GPU capaz.

@@ -69,25 +69,12 @@ public sealed class SileroVoiceActivityDetector : IVoiceActivityDetector
 
     public void Reset() => processor.ResetState();
 
-    private static async Task<string> BaixarModeloAsync(SileroVadOptions options, CancellationToken cancellationToken)
-    {
-        Directory.CreateDirectory(options.CacheDirectory);
-        var destino = Path.Combine(options.CacheDirectory, $"silero-vad-{options.ModelVersion}.bin");
-        if (File.Exists(destino)) return destino;
-
-        await using var origem = await WhisperGgmlDownloader.Default
-            .GetGgmlSileroVadModelAsync(options.ModelVersion, cancellationToken)
-            .ConfigureAwait(false);
-
-        // Baixa para arquivo temporário e move: interromper o download no meio deixaria
-        // um arquivo truncado no cache, e a execução seguinte o daria como válido.
-        var temporario = destino + ".parcial";
-        await using (var arquivo = File.Create(temporario))
-            await origem.CopyToAsync(arquivo, cancellationToken).ConfigureAwait(false);
-
-        File.Move(temporario, destino, overwrite: true);
-        return destino;
-    }
+    private static Task<string> BaixarModeloAsync(SileroVadOptions options, CancellationToken cancellationToken) =>
+        ModelCache.GetOrDownloadAsync(
+            options.CacheDirectory,
+            $"silero-vad-{options.ModelVersion}.bin",
+            ct => WhisperGgmlDownloader.Default.GetGgmlSileroVadModelAsync(options.ModelVersion, ct),
+            cancellationToken);
 
     public async ValueTask DisposeAsync()
     {

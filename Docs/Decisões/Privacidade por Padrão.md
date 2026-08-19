@@ -120,3 +120,16 @@ ao STT estouram o orçamento de ponta a ponta. Detalhes e números em
 
 A promessa de privacidade segue **incompleta**. Não anunciar privacidade total até
 que exista um caminho de tradução local viável.
+
+## Correção do alvo de desempenho (18/08/2026)
+
+O ADR registrava "RTF ≥ 12, porque a janela reprocessa 10 s a cada 800 ms". A medição
+do custo por passada mostrou que **RTF é a métrica errada** para essa decisão: ele
+varia de 1,2x a 13,7x na mesma máquina só mudando o tamanho do buffer, porque o custo
+é quase todo overhead fixo.
+
+O parâmetro correto: uma passada de 10 s custa **1.083 ms**, então o intervalo de
+reprocessamento precisa ser de **1,5 s**, não 800 ms.
+
+A arquitetura não muda — a janela deslizante segue viável e a latência esperada
+(1,1–2,6 s) continua dentro do alvo de 1,5–3 s. Ver [[Custo da Transcrição]].
