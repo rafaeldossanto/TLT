@@ -173,3 +173,47 @@ distorção nos trechos altos — justamente onde alguém fala mais forte.
 O WASAPI em modo compartilhado costuma entregar float de 32 bits, mas não é garantido.
 A leitura trata 32 e 16 bits e falha explicitamente no resto, em vez de produzir ruído
 silenciosamente.
+
+## VAD e segmentação (18/08/2026)
+
+O Silero VAD vem **dentro do Whisper.net** — `WhisperVadFactory` mais
+`WhisperVadProcessor`, com o modelo servido pelo mesmo downloader. Não foi preciso
+trazer ONNX Runtime só para isso.
+
+A responsabilidade está dividida em dois lugares, de propósito:
+
+| Onde | O quê |
+|---|---|
+| `Tlt.Stt.Local.SileroVoiceActivityDetector` | diz **onde** há fala num buffer |
+| `Tlt.Core.SpeechSegmenter` | decide **quando** um trecho está fechado |
+
+A política de segmentação mora no núcleo porque é decisão de produto, não detalhe de
+infraestrutura — e assim é testável com um detector falso, sem placa de som nem modelo
+carregado. Seis testes cobrem os casos que importam: fala encerrada por pausa, fala
+que ainda alcança o fim do buffer, corte forçado de quem não pausa, trecho curto
+descartado, descontinuidade e posição absoluta.
+
+### Verificado com fala real
+
+57,2 s de áudio produziram **8 trechos**, somando 49,5 s de fala. As pausas entre
+trechos ficaram em ~0,5 s, coerente com o limiar de silêncio de 600 ms, e nenhum
+precisou de corte forçado.
+
+Custo: 5,0 s de CPU para 57,2 s de áudio, cerca de **9% de um núcleo** em regime
+contínuo.
+
+> [!important] O VAD roda em CPU de propósito
+> `WithUseGpu(false)`. O Silero é minúsculo e a GPU é recurso disputado: ela precisa
+> ficar livre para o reconhecedor sustentar a janela deslizante, cuja folga sobre o
+> alvo já é de apenas 14%.
+
+### Duas decisões dentro do segmentador
+
+**Margem de fim de fala.** Um trecho só é dado por encerrado se sobrou silêncio
+observado depois dele. Sem essa margem, uma frase ainda em curso seria cortada só
+porque o buffer analisado terminou ali, e meia frase iria para a tradução.
+
+**Descontinuidade descarta o buffer.** Quando o WASAPI sinaliza áudio perdido, o que
+estava acumulado é jogado fora e o detector é reiniciado. Emendar o áudio de antes com
+o de depois produziria uma frase costurada por cima de um buraco — e a transcrição
+sairia errada sem nada indicar o motivo.
