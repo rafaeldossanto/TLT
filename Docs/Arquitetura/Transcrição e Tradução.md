@@ -123,3 +123,47 @@ comparar preço por minuto e ter credencial para testar.
 Como o ADR fixou local como padrão e proibiu subida automática para nuvem, a ausência
 desse provedor não bloqueia o produto — ela só limita o atendimento a máquinas sem
 GPU capaz.
+
+## A janela deslizante existe (18/08/2026)
+
+`Tlt.Core.SlidingWindowTranscriber` implementa LocalAgreement-2: o prefixo em que
+**duas passagens consecutivas concordam** é dado por estável e confirmado; o resto
+segue como hipótese revisável, que a interface mostra em cinza.
+
+Fica no núcleo, como a política de segmentação, porque é decisão de produto — e assim
+é testável com um reconhecedor falso que devolve transcrições programadas.
+
+### Medido em ritmo de tempo real
+
+Áudio entregue a 100 ms por bloco com espera de 100 ms entre eles, como numa chamada.
+A latência abaixo é a diferença entre o instante em que a palavra foi dita e o
+instante em que apareceu confirmada:
+
+| | Valor |
+|---|---|
+| Confirmações em 57 s | 31 |
+| Latência média | **927 ms** |
+| Mediana | 919 ms |
+| Máxima | 1.437 ms |
+
+> [!success] Abaixo do alvo
+> O ADR pedia 1,5–3 s. A implementação entrega menos de 1 s na mediana, com o texto
+> saindo em pedaços de 3 a 6 palavras a cada 1,5 s — cadência natural para legenda ao
+> vivo.
+
+### O erro que a medição pegou
+
+A primeira versão descartava só o excedente do buffer quando ele passava de 10 s,
+mantendo a fala em curso. Parecia certo, e estava errado: descartar o início **quebra
+a cadeia do LocalAgreement**, porque a passada seguinte não tem com o que comparar.
+
+O sintoma era claro no log em tempo real — trechos longos passavam quinze segundos só
+com hipóteses, e aí despejavam uma confirmação enorme de uma vez.
+
+A correção foi tratar o estouro da janela como fim de trecho: confirma tudo e
+recomeça. Custa perder contexto entre trechos, e em troca as confirmações passaram de
+11 para 31 no mesmo áudio, com a latência caindo de 1.102 ms para 927 ms.
+
+> [!tip] Nenhum teste de unidade pegaria isso
+> Os testes com reconhecedor falso passavam nas duas versões. O defeito só apareceu
+> alimentando áudio real em ritmo real e olhando **quando** cada confirmação saía.
