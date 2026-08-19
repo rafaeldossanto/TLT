@@ -47,3 +47,17 @@ transporte — que é a parte difícil de justificar.
 > A cobrança é por minuto de áudio e o app fica **aberto por horas**. Um usuário
 > pesado pode custar mais que a própria assinatura. O teto de gasto configurável não
 > é conveniência, é proteção de margem. Verificar preços atuais antes de precificar.
+
+## A promessa só fecha com tradução local
+
+Decidido em 18/08/2026 que a transcrição roda local por padrão
+(ver [[Privacidade por Padrão]]). Isso transforma privacidade de argumento em
+característica — mas só se a **tradução** também for local.
+
+Com STT local e tradução em nuvem, a frase honesta seria "o áudio não sai da sua
+máquina, o texto sai". Nenhum comprador corporativo aceita essa distinção, e nem
+deveria: o texto é a conversa.
+
+O que torna a promessa demonstrável, e não apenas afirmada: **o app funciona com a
+rede desligada**. O cliente desconfiado testa em trinta segundos. É o tipo de prova
+que vale mais que qualquer página de política de privacidade.

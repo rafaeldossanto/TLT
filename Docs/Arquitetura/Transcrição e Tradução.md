@@ -57,3 +57,24 @@ confiança do usuário do que ver o nome do próprio produto traduzido.
 
 Cache de traduções idênticas: em chamada, saudações e confirmações curtas se repetem
 muito.
+
+## Regra de degradação (revisada em 18/08/2026)
+
+Com a inversão para local por padrão (ver [[Privacidade por Padrão]]), a degradação
+passa a ter direção obrigatória:
+
+- **Nuvem falhando → cair para local**: permitido e automático. Reduz exposição.
+- **Local insuficiente → subir para nuvem**: **proibido automaticamente**. Só com
+  pergunta explícita ao usuário, porque aumenta exposição.
+
+Quando o local não sustenta, degradar dentro dele primeiro: aumentar o intervalo de
+reprocessamento, cair para segmentação por frase, sugerir modelo menor. A nuvem é a
+última carta, e é uma pergunta — nunca um fallback silencioso.
+
+## A tradução também precisa ser local
+
+O texto transcrito **é** o conteúdo da conversa. Mandá-lo para uma API de tradução
+enquanto se anuncia que "o áudio não sai da máquina" é uma meia-verdade.
+
+Enquanto não houver tradução local, o modo privacidade está incompleto e não deve ser
+vendido como completo. Ver [[Privacidade por Padrão]].
