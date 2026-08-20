@@ -21,6 +21,11 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+
+    <!-- Exigido pelo LibraryImport, o gerador moderno de P/Invoke usado em
+         Overlay/NativeMethods.cs. Fica so neste projeto, que e o unico que
+         conversa com a API do Windows. -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
 
 </Project>

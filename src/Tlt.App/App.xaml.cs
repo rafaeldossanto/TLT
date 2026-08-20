@@ -1,41 +1,50 @@
 using System.Windows;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Tlt.App.Overlay;
 
 namespace Tlt.App;
 
 /// <summary>
-/// Composição da aplicação. É o único lugar que conhece todas as implementações
-/// concretas — o resto do código depende apenas das abstrações de Tlt.Core.
+/// Ponto de entrada. Abre o overlay e põe o pipeline para rodar.
 /// </summary>
 public partial class App : Application
 {
-    private IHost? host;
+    private readonly CancellationTokenSource cancelamento = new();
+    private OverlayWindow? overlay;
 
-    /// <summary>Container de serviços, para as janelas resolverem dependências.</summary>
-    public static IServiceProvider Services =>
-        ((App)Current).host?.Services
-        ?? throw new InvalidOperationException("O host ainda não foi construído.");
-
-    protected override async void OnStartup(StartupEventArgs e)
+    protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
 
-        host = Host.CreateApplicationBuilder()
-            .ConfigureTlt()
-            .Build();
+        overlay = new OverlayWindow();
+        overlay.Show();
 
-        await host.StartAsync();
+        var servico = new TranscriptionService(overlay);
+
+        // Roda solto de propósito: carregar modelos e capturar áudio são operações
+        // longas, e travar a thread de interface deixaria a janela congelada.
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await servico.RunAsync(cancelamento.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                // encerramento normal
+            }
+            catch (Exception erro)
+            {
+                // Falhar em silêncio deixaria o overlay parado sem explicação, que é
+                // exatamente o pior comportamento possível no meio de uma reunião.
+                overlay.DefinirStatus($"erro: {erro.Message}");
+            }
+        });
     }
 
-    protected override async void OnExit(ExitEventArgs e)
+    protected override void OnExit(ExitEventArgs e)
     {
-        if (host is not null)
-        {
-            await host.StopAsync();
-            host.Dispose();
-        }
-
+        cancelamento.Cancel();
+        cancelamento.Dispose();
         base.OnExit(e);
     }
 }
