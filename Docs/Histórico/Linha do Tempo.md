@@ -51,3 +51,18 @@ Solution criada e compilando, com 6 testes passando — incluindo um teste de
 arquitetura que protege a independência do núcleo.
 
 Ainda pendente para a promessa de privacidade fechar: um caminho de tradução local.
+
+## 2026-08-18 (noite) — O app legenda de verdade
+
+Primeira execução real ponta a ponta: o TLT capturou o áudio de saída do PC,
+detectou a fala, transcreveu e mostrou a legenda no overlay, com o texto confirmado
+em branco e a hipótese em cinza.
+
+O caminho completo está de pé — captura WASAPI, normalização para 16 kHz mono, VAD
+Silero, janela deslizante com LocalAgreement-2, Whisper via Vulkan e overlay.
+Latência medida em ritmo real: **927 ms de mediana**, abaixo do alvo de 1,5–3 s.
+
+> [!warning] Ainda não traduz
+> O que existe é legenda **no idioma original**. A tradução é a peça que falta, e
+> depende de [[Tradução Local]] — sem um caminho local viável, ligar tradução em
+> nuvem quebraria a promessa de [[Privacidade por Padrão]].
