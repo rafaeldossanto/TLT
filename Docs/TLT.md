@@ -36,6 +36,7 @@ própria — e pode rodar **100% local**, sem o áudio sair da máquina. Ver
 - [[Visão Geral]] — os projetos da solution e por que a divisão é essa
 - [[Pipeline de Áudio]] — captura WASAPI, resample, VAD e segmentação
 - [[Custo da Transcrição]] — quanto custa cada passada, e por que RTF engana
+- [[Disputa de Recursos]] — o gargalo é CPU, e o que isso obrigou a mudar
 - [[Transcrição e Tradução]] — STT local e nuvem, tradução com contexto
 - [[Interface e Overlay]] — a janela de legenda e suas armadilhas
 

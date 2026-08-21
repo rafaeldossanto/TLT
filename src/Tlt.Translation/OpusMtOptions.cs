@@ -24,6 +24,19 @@ public sealed class OpusMtOptions
     /// <summary>Teto de tokens gerados por frase.</summary>
     public int MaxTokens { get; init; } = 256;
 
+    /// <summary>Núcleos que a tradução pode usar. Zero deixa o padrão da biblioteca.</summary>
+    /// <remarks>
+    /// Medido em 18/08/2026: com o tradutor usando todos os núcleos, o custo de uma
+    /// passada do reconhecedor saltou de 1.214 ms para 2.811 ms — mais que o dobro.
+    /// O gargalo compartilhado é **CPU**, não GPU: o reconhecedor roda em Vulkan, mas
+    /// depende de CPU para alimentar a GPU, e um tradutor que ocupa tudo o deixa sem
+    /// margem.
+    ///
+    /// Reservar núcleos para o reconhecedor custa latência de tradução e devolve
+    /// estabilidade à transcrição, que é a etapa com prazo apertado.
+    /// </remarks>
+    public int MaxThreads { get; init; } = 2;
+
     /// <summary>Quantas traduções ficam em cache.</summary>
     /// <remarks>
     /// Em reunião, saudações e confirmações curtas se repetem muito, e cada acerto de

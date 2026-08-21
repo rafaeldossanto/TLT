@@ -87,12 +87,21 @@ public sealed class OpusMtTranslator : ITranslator
             idFim: config.GetProperty("eos_token_id").GetInt32(),
             idInicioDecodificador: config.GetProperty("decoder_start_token_id").GetInt32());
 
+        // Limita os núcleos da tradução para não sufocar o reconhecedor, que tem prazo
+        // apertado e depende de CPU para alimentar a GPU.
+        var sessao = new SessionOptions();
+        if (options.MaxThreads > 0)
+        {
+            sessao.IntraOpNumThreads = options.MaxThreads;
+            sessao.InterOpNumThreads = 1;
+        }
+
         return new OpusMtTranslator(
             options,
             tokenizer,
-            new InferenceSession(caminhos["encoder_model_quantized.onnx"]),
-            new InferenceSession(caminhos["decoder_model_quantized.onnx"]),
-            new InferenceSession(caminhos["decoder_with_past_model_quantized.onnx"]));
+            new InferenceSession(caminhos["encoder_model_quantized.onnx"], sessao),
+            new InferenceSession(caminhos["decoder_model_quantized.onnx"], sessao),
+            new InferenceSession(caminhos["decoder_with_past_model_quantized.onnx"], sessao));
     }
 
     /// <inheritdoc />
