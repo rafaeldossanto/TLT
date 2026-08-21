@@ -26,7 +26,11 @@ public partial class OverlayWindow : Window
         RestaurarPosicao();
     }
 
-    /// <summary>Substitui o texto já confirmado.</summary>
+    /// <summary>Substitui o texto no idioma original.</summary>
+    public void DefinirOriginal(string texto) =>
+        Dispatcher.Invoke(() => Original.Text = settings.ShowOriginal ? texto : string.Empty);
+
+    /// <summary>Substitui a tradução já confirmada.</summary>
     public void DefinirConfirmado(string texto) => Dispatcher.Invoke(() => Confirmado.Text = texto);
 
     /// <summary>Substitui a hipótese em revisão.</summary>

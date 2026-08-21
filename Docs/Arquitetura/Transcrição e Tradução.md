@@ -167,3 +167,49 @@ recomeça. Custa perder contexto entre trechos, e em troca as confirmações pas
 > [!tip] Nenhum teste de unidade pegaria isso
 > Os testes com reconhecedor falso passavam nas duas versões. O defeito só apareceu
 > alimentando áudio real em ritmo real e olhando **quando** cada confirmação saía.
+
+## A tradução local está implementada (18/08/2026)
+
+`Tlt.Translation.OpusMtTranslator` implementa `ITranslator` com Opus-MT em ONNX,
+rodando em CPU — a GPU fica para o reconhecedor.
+
+| | |
+|---|---|
+| Latência por frase | 1.135 ms |
+| Cache (frase repetida) | 0 ms |
+| Glossário | termos preservados |
+| RAM do app com tudo carregado | 793 MB |
+
+### O contexto conversacional não se aplica
+
+A interface `ITranslator` recebe as frases anteriores como contexto, e **o Opus-MT as
+ignora**: ele é um tradutor de frase única e não aceita histórico como um LLM
+aceitaria.
+
+O parâmetro continua na interface de propósito, porque um tradutor remoto baseado em
+LLM saberia usá-lo. Mas a promessa da task original — "manter terminologia e resolver
+pronomes com contexto" — **não é entregue** por este provedor. Na prática o modelo
+especializado erra menos mesmo sem contexto, como a comparação com o Qwen mostrou.
+
+### Glossário por marcadores
+
+Cada termo protegido vira um marcador antes de traduzir e volta depois. Verificado:
+`TLT`, `Trisha` e `API gateway` atravessaram intactos.
+
+Termos mais longos são protegidos primeiro — sem isso, proteger `API` antes de
+`API gateway` quebraria o termo composto ao meio. Está coberto por teste.
+
+### A tradução roda fora do laço de transcrição
+
+Traduzir leva ~1,1 s. Fazer isso dentro do `await foreach` da transcrição travaria o
+consumo de áudio por todo esse tempo, e o áudio acumulado viraria `DataDiscontinuity`
+— perda real de fala.
+
+Uma fila desacopla as duas velocidades: a transcrição escreve os trechos confirmados
+e segue; um consumidor separado traduz e atualiza a tela.
+
+> [!important] A conta que sustenta esse desenho
+> A tradução consome 1,1 s e recebe trabalho a cada 1,5 s (o intervalo de confirmação
+> da janela deslizante). Cabe, com 73% de ocupação. Se o intervalo diminuir ou a
+> tradução ficar mais lenta, a fila começa a crescer — vale instrumentar o tamanho
+> dela antes de mexer nesses números.

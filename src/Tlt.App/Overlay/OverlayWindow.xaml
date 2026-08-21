@@ -30,7 +30,16 @@
                        Margin="0,0,0,8"
                        Text="iniciando..."/>
 
-            <!-- Texto confirmado: nao muda mais. -->
+            <!-- Original, menor e apagado: serve de referencia para quem quer
+                 conferir o que foi dito, sem competir com a traducao. -->
+            <TextBlock x:Name="Original"
+                       FontFamily="Segoe UI"
+                       FontSize="14"
+                       Foreground="#6E6E6E"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,4"/>
+
+            <!-- Traducao: e o que o usuario esta lendo de fato. -->
             <TextBlock x:Name="Confirmado"
                        FontFamily="Segoe UI"
                        FontSize="21"

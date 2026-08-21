@@ -1,4 +1,5 @@
 using Tlt.Core.Audio;
+using Tlt.Core.Models;
 using Whisper.net;
 using Whisper.net.Ggml;
 

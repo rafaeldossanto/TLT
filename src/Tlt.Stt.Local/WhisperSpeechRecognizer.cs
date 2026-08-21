@@ -1,5 +1,6 @@
 using System.Runtime.CompilerServices;
 using Tlt.Core.Transcription;
+using Tlt.Core.Models;
 using Whisper.net;
 using Whisper.net.Ggml;
 using Whisper.net.LibraryLoader;

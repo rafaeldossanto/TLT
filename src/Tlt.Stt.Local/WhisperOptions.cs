@@ -1,3 +1,4 @@
+using Tlt.Core.Models;
 using Whisper.net.Ggml;
 using Whisper.net.LibraryLoader;
 

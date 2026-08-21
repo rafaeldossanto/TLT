@@ -16,6 +16,10 @@
     <PackageVersion Include="Whisper.net.Runtime" Version="1.9.1" />
     <PackageVersion Include="Whisper.net.Runtime.Vulkan" Version="1.9.1" />
 
+    <!-- Traducao local -->
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime" Version="1.29.0" />
+    <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0" />
+
     <!-- Composicao e configuracao -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.11" />

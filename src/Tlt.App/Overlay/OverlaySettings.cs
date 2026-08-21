@@ -18,6 +18,13 @@ public sealed class OverlaySettings
     /// <summary>Mostra também a hipótese, em cinza, além do texto confirmado.</summary>
     public bool ShowHypotheses { get; set; } = true;
 
+    /// <summary>Mostra a linha com o texto no idioma original, acima da tradução.</summary>
+    /// <remarks>
+    /// Parte dos usuários quer só a tradução; quem entende um pouco do idioma costuma
+    /// preferir ver os dois para conferir.
+    /// </remarks>
+    public bool ShowOriginal { get; set; } = true;
+
     private static string Arquivo => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "TLT", "overlay.json");
 
