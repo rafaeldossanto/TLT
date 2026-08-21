@@ -1,116 +1,163 @@
 using System.Diagnostics;
 using System.Text;
-using LLama;
-using LLama.Common;
-using LLama.Native;
-using LLama.Sampling;
+using System.Text.Json;
+using Microsoft.ML.OnnxRuntime;
+using Microsoft.ML.OnnxRuntime.Tensors;
+using Microsoft.ML.Tokenizers;
 
-// Spike da task #13: a traducao consegue rodar LOCAL com qualidade e latencia
-// aceitaveis? Sem isso a promessa de privacidade do ADR nao fecha, porque o texto
-// transcrito — que E o conteudo da conversa — iria para uma API de terceiro.
+// Spike da task #14: Opus-MT (Marian) em ONNX, com cache de key/value no decoder.
 //
-// Mede por FRASE, nao pelo texto inteiro: no uso real a traducao acontece a cada
-// segmento confirmado pela janela deslizante.
+// Sem cache o decoder reprocessa a sequencia inteira a cada token gerado — O(n²) —
+// e a media ficou em 1.709 ms. Com cache cada passo processa apenas o token novo.
 
-var baseDir = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
-var modelPath = Path.Combine(baseDir, "models", "qwen2.5-3b-instruct-q4km.gguf");
-var referenciaPath = Path.GetFullPath(Path.Combine(baseDir, "..", "WhisperSpike", "audio", "referencia.txt"));
+var dir = @"C:\Users\rafae\Work\TLT\spikes\TranslationSpike\models\opus-mt-en-pt";
+const int TokenInicioDecoder = 54775;
+const int TokenFim = 44670;
+const int MaxTokens = 256;
+const int Camadas = 6;
 
-if (!File.Exists(modelPath)) { Console.WriteLine($"modelo nao encontrado: {modelPath}"); return; }
+var vocab = JsonSerializer.Deserialize<Dictionary<string, int>>(File.ReadAllText(Path.Combine(dir, "vocab.json")))!;
+var vocabInverso = new Dictionary<int, string>(vocab.Count);
+foreach (var (token, id) in vocab) vocabInverso[id] = token;
+var idDesconhecido = vocab.GetValueOrDefault("<unk>", 52024);
 
-Console.WriteLine("=== TLT | spike de traducao local (task #13) ===");
+using var spmStream = File.OpenRead(Path.Combine(dir, "source.spm"));
+var spm = SentencePieceTokenizer.Create(spmStream, false, false);
+
+Console.Write("carregando sessoes ONNX... ");
+var relogio = Stopwatch.StartNew();
+using var encoder = new InferenceSession(Path.Combine(dir, "encoder_model_quantized.onnx"));
+using var decoder = new InferenceSession(Path.Combine(dir, "decoder_model_quantized.onnx"));
+using var decoderComCache = new InferenceSession(Path.Combine(dir, "decoder_with_past_model_quantized.onnx"));
+Console.WriteLine($"{relogio.Elapsed.TotalSeconds:F1}s");
 Console.WriteLine();
 
-// Vulkan e o mesmo backend do Whisper: um so caminho de GPU no produto inteiro,
-// sem CUDA Toolkit e servindo NVIDIA/AMD/Intel.
-NativeLibraryConfig.All.WithLogCallback((level, msg) => { });
+Traduzir("Hello.");   // aquecimento
 
-var parametros = new ModelParams(modelPath)
-{
-    ContextSize = 2048,
-    GpuLayerCount = 99,   // tudo que couber na GPU
-};
-
-var relogioCarga = Stopwatch.StartNew();
-using var weights = await LLamaWeights.LoadFromFileAsync(parametros);
-relogioCarga.Stop();
-
-Console.WriteLine($"Modelo   : {Path.GetFileName(modelPath)}");
-Console.WriteLine($"Tamanho  : {weights.SizeInBytes / 1024.0 / 1024.0:N0} MB | {weights.ParameterCount / 1_000_000_000.0:N1}B parametros");
-Console.WriteLine($"Carga    : {relogioCarga.Elapsed.TotalSeconds:F1}s");
-Console.WriteLine();
-
-var executor = new StatelessExecutor(weights, parametros);
-
-// Frases do mesmo texto usado no spike de STT, para comparar o pipeline ponta a ponta.
-var texto = File.ReadAllText(referenciaPath);
+var texto = File.ReadAllText(@"C:\Users\rafae\Work\TLT\spikes\WhisperSpike\audio\referencia.txt");
 var frases = texto.Split(['.', '?'], StringSplitOptions.RemoveEmptyEntries)
-                  .Select(f => f.Trim())
-                  .Where(f => f.Length > 15)
-                  .ToList();
+                  .Select(f => f.Trim()).Where(f => f.Length > 15).ToList();
 
-Console.WriteLine($"Traduzindo {frases.Count} frases EN->PT, uma a uma.");
-Console.WriteLine();
-
-// Aquecimento: a primeira inferencia paga inicializacao de GPU, como no Whisper.
-await Consumir(executor.InferAsync(Prompt("Hello.", []), Params()));
-
-var tempos = new List<double>();
-var historico = new List<string>();
+var latencias = new List<double>();
 
 foreach (var frase in frases)
 {
-    var relogio = Stopwatch.StartNew();
-    var traducao = await Consumir(executor.InferAsync(Prompt(frase, historico), Params()));
-    relogio.Stop();
+    var t = Stopwatch.StartNew();
+    var traducao = Traduzir(frase);
+    t.Stop();
+    latencias.Add(t.Elapsed.TotalMilliseconds);
 
-    tempos.Add(relogio.Elapsed.TotalMilliseconds);
-    historico.Add(traducao);
-    if (historico.Count > 3) historico.RemoveAt(0);
-
-    Console.WriteLine($"[{relogio.Elapsed.TotalMilliseconds,6:N0} ms] {frase}");
-    Console.WriteLine($"           -> {traducao}");
-    Console.WriteLine();
+    Console.WriteLine($"[{t.Elapsed.TotalMilliseconds,6:N0} ms] {traducao}");
 }
 
-Console.WriteLine("=== RESUMO ===");
-Console.WriteLine($"  frases          : {tempos.Count}");
-Console.WriteLine($"  latencia media  : {tempos.Average():N0} ms");
-Console.WriteLine($"  mediana         : {tempos.Order().ElementAt(tempos.Count / 2):N0} ms");
-Console.WriteLine($"  minima / maxima : {tempos.Min():N0} / {tempos.Max():N0} ms");
 Console.WriteLine();
-Console.WriteLine("  A traducao entra DEPOIS do STT, entao soma na latencia total.");
-Console.WriteLine("  Com o alvo de 1,5-3s ponta a ponta, sobra pouco para esta etapa.");
+Console.WriteLine("=== RESUMO (com cache de key/value) ===");
+Console.WriteLine($"  latencia media  : {latencias.Average():N0} ms");
+Console.WriteLine($"  mediana         : {latencias.Order().ElementAt(latencias.Count / 2):N0} ms");
+Console.WriteLine($"  minima / maxima : {latencias.Min():N0} / {latencias.Max():N0} ms");
+Console.WriteLine();
+Console.WriteLine($"  alvo            : abaixo de 500 ms");
+Console.WriteLine($"  sem cache       : 1.709 ms");
+Console.WriteLine($"  Qwen2.5-3B      : 2.232 ms (descartado)");
 
-return;
-
-// Formato ChatML do Qwen. O historico das ultimas frases entra como contexto:
-// e o que mantem terminologia e resolve pronomes em reuniao tecnica.
-string Prompt(string frase, List<string> anteriores)
+string Traduzir(string entrada)
 {
+    var pecas = spm.EncodeToTokens(entrada, out _, considerNormalization: true);
+    var ids = new List<long>(pecas.Count + 1);
+    foreach (var p in pecas) ids.Add(vocab.TryGetValue(p.Value, out var id) ? id : idDesconhecido);
+    ids.Add(TokenFim);
+
+    var comprimento = ids.Count;
+    var inputIds = new DenseTensor<long>([1, comprimento]);
+    var attention = new DenseTensor<long>([1, comprimento]);
+    for (var i = 0; i < comprimento; i++) { inputIds[0, i] = ids[i]; attention[0, i] = 1; }
+
+    using var saidaEncoder = encoder.Run([
+        NamedOnnxValue.CreateFromTensor("input_ids", inputIds),
+        NamedOnnxValue.CreateFromTensor("attention_mask", attention),
+    ]);
+    var hidden = saidaEncoder.First(v => v.Name == "last_hidden_state").AsTensor<float>().ToDenseTensor();
+
+    // --- primeira passada: sem cache, produz os dois caches ---
+    var primeiroId = new DenseTensor<long>([1, 1]);
+    primeiroId[0, 0] = TokenInicioDecoder;
+
+    using var primeira = decoder.Run([
+        NamedOnnxValue.CreateFromTensor("input_ids", primeiroId),
+        NamedOnnxValue.CreateFromTensor("encoder_hidden_states", hidden),
+        NamedOnnxValue.CreateFromTensor("encoder_attention_mask", attention),
+    ]);
+
+    var gerados = new List<long>();
+    var proximo = Argmax(primeira.First(v => v.Name == "logits").AsTensor<float>());
+
+    var cacheDecoder = new DenseTensor<float>[Camadas * 2];
+    var cacheEncoder = new DenseTensor<float>[Camadas * 2];
+    for (var c = 0; c < Camadas; c++)
+    {
+        cacheDecoder[c * 2] = Copiar(primeira, $"present.{c}.decoder.key");
+        cacheDecoder[c * 2 + 1] = Copiar(primeira, $"present.{c}.decoder.value");
+        // O cache do encoder nao muda entre passos: e calculado uma vez e reusado.
+        cacheEncoder[c * 2] = Copiar(primeira, $"present.{c}.encoder.key");
+        cacheEncoder[c * 2 + 1] = Copiar(primeira, $"present.{c}.encoder.value");
+    }
+
+    // --- passos seguintes: so o token novo entra ---
+    for (var passo = 0; passo < MaxTokens && proximo != TokenFim; passo++)
+    {
+        gerados.Add(proximo);
+
+        var tokenAtual = new DenseTensor<long>([1, 1]);
+        tokenAtual[0, 0] = proximo;
+
+        var entradas = new List<NamedOnnxValue>(26)
+        {
+            NamedOnnxValue.CreateFromTensor("input_ids", tokenAtual),
+            NamedOnnxValue.CreateFromTensor("encoder_attention_mask", attention),
+        };
+
+        for (var c = 0; c < Camadas; c++)
+        {
+            entradas.Add(NamedOnnxValue.CreateFromTensor($"past_key_values.{c}.decoder.key", cacheDecoder[c * 2]));
+            entradas.Add(NamedOnnxValue.CreateFromTensor($"past_key_values.{c}.decoder.value", cacheDecoder[c * 2 + 1]));
+            entradas.Add(NamedOnnxValue.CreateFromTensor($"past_key_values.{c}.encoder.key", cacheEncoder[c * 2]));
+            entradas.Add(NamedOnnxValue.CreateFromTensor($"past_key_values.{c}.encoder.value", cacheEncoder[c * 2 + 1]));
+        }
+
+        using var saida = decoderComCache.Run(entradas);
+        proximo = Argmax(saida.First(v => v.Name == "logits").AsTensor<float>());
+
+        for (var c = 0; c < Camadas; c++)
+        {
+            cacheDecoder[c * 2] = Copiar(saida, $"present.{c}.decoder.key");
+            cacheDecoder[c * 2 + 1] = Copiar(saida, $"present.{c}.decoder.value");
+        }
+    }
+
     var sb = new StringBuilder();
-    sb.Append("<|im_start|>system\n");
-    sb.Append("Você é um tradutor de inglês para português brasileiro em uma reunião de trabalho. ");
-    sb.Append("Traduza APENAS a frase do usuário, sem explicar, sem comentar, sem repetir o original. ");
-    sb.Append("Mantenha termos técnicos e nomes de produto em inglês.");
-    if (anteriores.Count > 0)
-        sb.Append($" Contexto das frases anteriores já traduzidas: {string.Join(" ", anteriores)}");
-    sb.Append("<|im_end|>\n<|im_start|>user\n");
-    sb.Append(frase);
-    sb.Append("<|im_end|>\n<|im_start|>assistant\n");
-    return sb.ToString();
+    foreach (var id in gerados)
+        if (vocabInverso.TryGetValue((int)id, out var token))
+            sb.Append(token.Replace("\u2581", " "));
+
+    return sb.ToString().Trim();
 }
 
-InferenceParams Params() => new()
-{
-    MaxTokens = 200,
-    AntiPrompts = ["<|im_end|>", "<|im_start|>"],
-    SamplingPipeline = new DefaultSamplingPipeline { Temperature = 0.2f }  // traducao quer previsibilidade
-};
+static DenseTensor<float> Copiar(IDisposableReadOnlyCollection<DisposableNamedOnnxValue> saida, string nome) =>
+    saida.First(v => v.Name == nome).AsTensor<float>().ToDenseTensor();
 
-async Task<string> Consumir(IAsyncEnumerable<string> fluxo)
+// O indexador de Tensor recalcula o deslocamento a cada acesso. Com 54.776
+// posicoes por token gerado, isso domina o tempo. O buffer e contiguo, entao
+// vale percorrer o span direto.
+static long Argmax(Tensor<float> logits)
 {
-    var sb = new StringBuilder();
-    await foreach (var t in fluxo) sb.Append(t);
-    return sb.ToString().Replace("<|im_end|>", "").Trim();
+    var span = logits.ToDenseTensor().Buffer.Span;
+    var melhor = 0;
+    var melhorValor = float.MinValue;
+    for (var v = 0; v < span.Length; v++)
+    {
+        if (span[v] <= melhorValor) continue;
+        melhorValor = span[v];
+        melhor = v;
+    }
+    return melhor;
 }

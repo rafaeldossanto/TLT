@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Herda as propriedades da raiz e afrouxa o que so faz sentido no codigo de
+       producao. Spike e codigo de medicao, descartavel: submete-lo ao gerenciamento
+       central de versoes e a warnings-como-erro cria atrito sem beneficio. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,11 @@
+<Project>
+
+  <!-- Desliga o gerenciamento central de versoes para os spikes. O MSBuild usa o
+       Directory.Packages.props mais proximo, entao este substitui o da raiz.
+       Spike e codigo de medicao, descartavel: fixar versao no proprio csproj mantem
+       cada um independente e nao polui o catalogo do produto. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>
