@@ -26,6 +26,56 @@
          Overlay/NativeMethods.cs. Fica so neste projeto, que e o unico que
          conversa com a API do Windows. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+    <ApplicationIcon>tlt.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <!-- Identidade do executavel: e o que aparece nas propriedades do arquivo, no
+       gerenciador de tarefas e na entrada de programas instalados. -->
+  <PropertyGroup>
+    <AssemblyName>TLT</AssemblyName>
+    <Product>TLT</Product>
+    <AssemblyTitle>TLT — Transleitor</AssemblyTitle>
+    <Description>Traduz em tempo real o audio que sai do computador, sem enviar nada para a internet.</Description>
+    <Company>Rafael dos Santos</Company>
+    <Copyright>Copyright (c) 2026 Rafael dos Santos</Copyright>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <!-- Publicacao para distribuicao.
+
+       Self-contained: o usuario final nao precisa ter o .NET instalado, e exigir
+       isso de quem so quer legendar uma reuniao seria perder metade das instalacoes.
+
+       NAO e single-file de proposito: o app carrega DLLs nativas grandes (Vulkan,
+       ONNX Runtime), e o modo arquivo unico as extrairia para a pasta temporaria a
+       cada execucao — start mais lento e disco desperdicado. Como um instalador vai
+       distribuir isso de qualquer forma, uma pasta e melhor.
+
+       ReadyToRun compila antecipadamente: o executavel cresce, mas abre mais rapido,
+       e a primeira impressao de um app que ja demora carregando modelos importa. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <PublishSingleFile>false</PublishSingleFile>
+    <SatelliteResourceLanguages>pt-BR;en</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+  </PropertyGroup>
+
+  <!-- Alguns pacotes copiam binarios nativos de TODAS as plataformas, ignorando o
+       RuntimeIdentifier. No primeiro publish isso trouxe 73 MB de runtimes de macOS,
+       Linux e ARM para dentro de um aplicativo que so roda em Windows x64 — 20% do
+       pacote em arquivos que nunca serao carregados.
+
+       O maior ofensor e o Whisper.net: sozinho, o runtime Vulkan para Linux ocupa
+       59 MB.
+
+       A remocao e por padrao de nome e nao por lista fixa, para que um pacote novo
+       trazendo outra plataforma tambem seja pego. -->
+  <Target Name="RemoverRuntimesDeOutrasPlataformas" AfterTargets="Publish">
+    <Exec Command="powershell -NoProfile -Command &quot;$p = '$(PublishDir)runtimes'; if (Test-Path $p) { Get-ChildItem $p -Directory -Recurse | Where-Object { $_.Name -match '^(linux|osx|macos|maccatalyst|ios|android|browser|win-arm|win-x86)' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue }&quot;"
+          ContinueOnError="true" />
+  </Target>
 
 </Project>

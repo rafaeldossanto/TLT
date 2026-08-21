@@ -45,6 +45,10 @@ própria — e pode rodar **100% local**, sem o áudio sair da máquina. Ver
 - [[Requisitos de Hardware]] — tiers de GPU e o que cada um entrega
 - [[Posicionamento Comercial]] — diferencial, concorrência e LGPD
 
+## Infraestrutura
+
+- [[Empacotamento]] — como o TLT sai daqui e chega em outra máquina
+
 ## Contexto
 
 - [[Privacidade por Padrão]] — o ADR: transcrição local por padrão e o que decorre disso
