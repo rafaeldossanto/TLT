@@ -217,3 +217,9 @@ porque o buffer analisado terminou ali, e meia frase iria para a tradução.
 estava acumulado é jogado fora e o detector é reiniciado. Emendar o áudio de antes com
 o de depois produziria uma frase costurada por cima de um buraco — e a transcrição
 sairia errada sem nada indicar o motivo.
+
+## A dúvida do `WithFormat` está resolvida
+
+Medido com fala real em 18/08/2026: converter por conta própria dá **29,3%** de taxa
+de erro contra **41,4%** de pedir o formato pronto ao WASAPI. A etapa de conversão
+fica. Ver [[Conversão de Áudio]].
